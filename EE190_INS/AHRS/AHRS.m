@@ -50,9 +50,11 @@ b(:, 1) = bias_th_hat;
 P = zeros(6,6);
 Phi = zeros(6,6);
 bias_var = std(delta_th(:,1:round(fsamp)), 0, 2);
-sigma_rho = pi;
+sigma_rho = (pi/4);
+sigma_b = 1e-5;
 P(1:3, 1:3) = sigma_rho^2*eye(3); %A very large error since we are uncertain about the state
-P(4:6, 4:6) = blkdiag(bias_var(1)^2, bias_var(2)^2, bias_var(3)^2);
+% P(4:6, 4:6) = blkdiag(bias_var(1)^2, bias_var(2)^2, bias_var(3)^2);
+P(4:6, 4:6) = sigma_b^2*eye(3);
 
 Q = zeros(6,6);
 
