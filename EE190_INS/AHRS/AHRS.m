@@ -5,11 +5,13 @@ T = readtable("Epson_G370_20230130_174502.csv");
 %create vectors of the data
 delta_v = [T.delta_v_x, T.delta_v_y, T.delta_v_z]';
 delta_th = [T.delta_th_x, T.delta_th_y, T.delta_th_z]';
+delta_th = delta_th * (pi/180); %covert to radians
 t = seconds(T.system_time - T.system_time(1));
 
 %throw away first sample since it is an outlier
 delta_v = delta_v(:, 2:end);
 delta_th = delta_th(:, 2:end);
+test_delta_th = zeros(3, size(delta_th, 2));
 t = t(2:end);
 
 dt = diff(t);
@@ -21,8 +23,8 @@ reset_period = 1; %s, IMU is placed back at rest at this time
 reset_samples = reset_period * fsamp; %number of samples from last reset period
 plot_until = 18; %s, number of seconds to plot at end of run
 tot_samps = 18 * fsamp;%size(delta_v, 2); % number of samples in the experiment
-Srg = 0.0133; %degrees/sqrt(s), angular random walk
-Sbgd = 0.0067; %degree/hour, gyro bias
+Srg = (0.6*(1/60)*(pi/180))^2; %degrees/sqrt(s), angular random walk
+Sbgd = (0.8*(1/3600)*(pi/80))^2 * tau; %degree/hour, gyro bias
 
 %% Level the IMU in the period where we know it is at rest
 %level the IMU using an average
@@ -68,7 +70,7 @@ var_b(:, 1) = [P(4,4), P(5,5), P(6,6)]';
 
 %initialize residual vector
 r = inf(3, tot_samps);
-sig_meas = 1e-6; %[rad], error in model
+sig_meas = 1e-4; %[rad], error in model
 R = sig_meas^2 * eye(3);
 
 %use the following arrays to propagate the residual covariance
@@ -76,7 +78,10 @@ var_r = inf(3, tot_samps);
 
 %Measurement Matrix
 H = zeros(3, 6);
-H(1:3, 1:3) = -eye(3);
+H(1:3, 1:3) = eye(3);
+
+K_plot = zeros(18, tot_samps);
+K = zeros(6,3);
 
 C_b_t_o = C_t_b_o';
 C_b_t_old = C_b_t_o;
@@ -100,7 +105,7 @@ for ii = 2:tot_samps
         Phi = calcStateTransition(C_b_t_new, tau);
     
         %Calculate the noise covariance matrix
-        Q = calcINSNoise(tau, Srg, Sbgd, C_b_t_new, Phi);
+        Q = calcINSNoise(tau, Srg, Sbgd, C_b_t_new);
     
         P = Phi*P*Phi' + Q;
 
@@ -109,7 +114,8 @@ for ii = 2:tot_samps
     else
         %measurement prediction step
         delta_C = C_b_t_o' * C_b_t_old;
-        rho_skew = eye(3) - delta_C;
+        rho_skew = delta_C - eye(3);
+%         rho_skew = eye(3) - delta_C;
         rho = inv_skew_symmetric(rho_skew);
 
         r(:, ii) = rho;
@@ -127,26 +133,27 @@ for ii = 2:tot_samps
         error_state = K*r(:,ii);
 
         %update rotation matrix
-        C_b_t_new = (eye(3) - Skew_symmetric(error_state(1:3)))*C_b_t_old;
+        C_b_t_new = (eye(3) + Skew_symmetric(error_state(1:3)))*C_b_t_old;
         C_b_t_old = C_b_t_new;
-
-        A = (C_b_t_old' - C_b_t_old) / (1 + trace(C_b_t_old));
-        C_b_t_old = (eye(3) + A) / (eye(3) - A);
 
         %extract rpy for plotting
         rpy(:, ii) = extract_rpy(C_b_t_old);
 
-        b(:, ii) = b(:, ii - 1) - error_state(4:6);
+        b(:, ii) = b(:, ii - 1) + error_state(4:6);
 
         var_r(:, ii) = [S(1,1), S(2,2), S(3,3)]';
+
+        %store K for plotting
+        K_plot(:, ii) = reshape(K, 1, []);
         
     end
-
+    %store K for plotting
+    K_plot(:, ii) = reshape(K, 1, []);
     var_rho(:, ii) = [P(1,1), P(2,2), P(3,3)]';
     var_b(:, ii) = [P(4,4), P(5,5), P(6,6)]';
 end
 
-axis_plot = 0.5;
+axis_plot = 0.009;
 
 %% Plot Results
 figure;
@@ -210,7 +217,7 @@ title("b g_z (m)");
 xlabel("t (s)");
 ylabel("b g_z (m)");
 
-axis_plot = 0.5;
+axis_plot = 0.001;
 figure;
 %plot residual vs covariance of residual 
 subplot(3, 1, 1);
@@ -243,6 +250,73 @@ title("Error Attitude Z");
 xlabel("time");
 ylabel("Error Attitude Z");
 axis([0, inf, -axis_plot, axis_plot])
+
+% figure;
+% %plot all of the elements of K
+% subplot(3,1,1);
+% plot(t(1:tot_samps), K_plot(1, 1:tot_samps));
+% title("K_1");
+% subplot(3,1,2);
+% plot(t(1:tot_samps), K_plot(2, 1:tot_samps));
+% title("K_2");
+% subplot(3,1,3);
+% plot(t(1:tot_samps), K_plot(2, 1:tot_samps));
+% title("K_3");
+% figure;
+% %plot all of the elements of K
+% subplot(3,1,1);
+% plot(t(1:tot_samps), K_plot(4, 1:tot_samps));
+% title("K_4")
+% subplot(3,1,2);
+% plot(t(1:tot_samps), K_plot(5, 1:tot_samps));
+% title("K_5")
+% subplot(3,1,3);
+% plot(t(1:tot_samps), K_plot(6, 1:tot_samps));
+% title("K_6")
+% figure;
+% %plot all of the elements of K
+% subplot(3,1,1);
+% plot(t(1:tot_samps), K_plot(7, 1:tot_samps));
+% title("K_7")
+% subplot(3,1,2);
+% plot(t(1:tot_samps), K_plot(8, 1:tot_samps));
+% title("K_8")
+% subplot(3,1,3);
+% plot(t(1:tot_samps), K_plot(9, 1:tot_samps));
+% title("K_9")
+% figure;
+% %plot all of the elements of K
+% subplot(3,1,1);
+% plot(t(1:tot_samps), K_plot(10, 1:tot_samps));
+% title("K_{10}")
+% subplot(3,1,2);
+% plot(t(1:tot_samps), K_plot(11, 1:tot_samps));
+% title("K_{11}")
+% subplot(3,1,3);
+% plot(t(1:tot_samps), K_plot(12, 1:tot_samps));
+% title("K_{12}")
+% figure;
+% %plot all of the elements of K
+% subplot(3,1,1);
+% plot(t(1:tot_samps), K_plot(13, 1:tot_samps));
+% title("K_{13}")
+% subplot(3,1,2);
+% plot(t(1:tot_samps), K_plot(14, 1:tot_samps));
+% title("K_{14}")
+% subplot(3,1,3);
+% plot(t(1:tot_samps), K_plot(15, 1:tot_samps));
+% title("K_{15}")
+% figure;
+% %plot all of the elements of K
+% subplot(3,1,1);
+% plot(t(1:tot_samps), K_plot(16, 1:tot_samps));
+% title("K_{16}")
+% subplot(3,1,2);
+% plot(t(1:tot_samps), K_plot(17, 1:tot_samps));
+% title("K_{17}")
+% subplot(3,1,3);
+% plot(t(1:tot_samps), K_plot(18, 1:tot_samps));
+% title("K_{18}")
 
 %% Fnctions
 function C_t_b = t2b(delta_th)
@@ -290,16 +364,15 @@ function phi = calcStateTransition(C_b_t, tau)
     phi(1:3, 4:6) = C_b_t*tau;
     phi(4:6, 1:3) = zeros(3,3);
     phi(4:6, 4:6) = eye(3);
+
 end
 
-function Q = calcINSNoise(tau, Srg, Sbgd, C_b_t, Phi)
+function Q = calcINSNoise(tau, Srg, Sbgd, C_b_t)
     Q = zeros(6,6);
-    Q(1:3, 1:3) = (Srg*tau + (1/3)*Sbgd*tau^3)*eye(3);
-    Q(1:3, 4:6) = (1/2)*Sbgd*tau^2*C_b_t;
-    Q(4:6, 1:3) = (1/2)*Sbgd*tau^2*C_b_t;
+    Q(1:3, 1:3) = C_b_t*Srg*eye(3)*C_b_t'*tau + (1/3)*C_b_t*Sbgd*eye(3)*C_b_t'*tau^3;
+    Q(1:3, 4:6) = (1/2)*C_b_t*Sbgd*eye(3)*tau^2;
+    Q(4:6, 1:3) = (1/2)*C_b_t'*Sbgd*eye(3)*tau^2;
     Q(4:6, 4:6) = Sbgd*tau*eye(3);
-
-    Q = (1/2)*(Phi*Q*Phi' + Q);
 end
 
 function x = inv_skew_symmetric(R)
