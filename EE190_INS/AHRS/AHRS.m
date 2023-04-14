@@ -19,12 +19,17 @@ tau = mean(dt);
 
 %% constants
 fsamp = 125; %Hz
+% fcut = fsamp/2; %Hz cutoff frequency
+fcut = 52.4; %Hz
 reset_period = 1; %s, IMU is placed back at rest at this time
 reset_samples = reset_period * fsamp; %number of samples from last reset period
 plot_until = 18; %s, number of seconds to plot at end of run
-tot_samps = 18 * fsamp;%size(delta_v, 2); % number of samples in the experiment
-Srg = (0.6*(1/60)*(pi/180))^2; %degrees/sqrt(s), angular random walk
-Sbgd = (0.8*(1/3600)*(pi/80))^2 * tau; %degree/hour, gyro bias
+tot_samps = plot_until * fsamp;%size(delta_v, 2); % number of samples in the experiment
+Srg = ((0.6*(1/60)*(pi/180))*sqrt(tau))^2; %degrees/sqrt(s), angular random walk
+% Sbgd = ((0.8*(1/3600)*(pi/80))*3; %degree/hour, gyro bias
+B = ((0.8*(1/3600)*(pi/80))^2*pi)/(2*log(2));
+% Sbgd = (B^2)/(2*pi*fcut);
+Sbgd = (2*B^2*log(2))/(pi*(0.4365)^2*(70/1.89));
 
 %% Level the IMU in the period where we know it is at rest
 [ini_phi, ini_theta] = level(delta_v(:, 1:fsamp), fsamp);
@@ -83,7 +88,7 @@ for ii = 2:tot_samps
         b(:, ii) = b(:, ii - 1);
     
         %remove bias from measurement
-        delta_th(:, ii) = delta_th(:, ii) - b(:, ii);
+        delta_th(:, ii) = delta_th(:, ii) - b(:, ii)*tau;
     
         %propagate rotation matrix using delta_th
         C_b_t_new = attitude_update(C_b_t_old, delta_th(:, ii));
