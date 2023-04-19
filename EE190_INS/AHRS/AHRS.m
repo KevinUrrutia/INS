@@ -125,7 +125,7 @@ for ii = 2:tot_samps
         rho_skew = delta_C - eye(3);        % Remove the diagonal
         rho = inv_skew_symmetric(rho_skew); % extract rho
 
-        r(:, ii) = rho;
+        r(:, ii) = rho; 
 
         %residual covariance
         S = H*P*H' + R;
@@ -140,7 +140,7 @@ for ii = 2:tot_samps
         error_state = K*r(:,ii);
 
         %update rotation matrix
-        Pc        = -Skew_symmetric(error_state(1:3));
+        Pc        = Skew_symmetric(error_state(1:3));
         C_corr    = (eye(3) + Pc);
         C_b_i_new = C_corr * C_b_i_old;     % JAF: Matches KUA eqn. (22)
         C_b_i_old = C_b_i_new;              % IC for next time propagation
@@ -148,7 +148,7 @@ for ii = 2:tot_samps
         %extract rpy for plotting
         rpy(:, ii) = extract_rpy(C_b_i_old);
         
-        b(:, ii) = b(:, ii - 1) - error_state(4:6); % rads/sec
+        b(:, ii) = b(:, ii - 1) + error_state(4:6); % rads/sec
         error_state = zeros(6,1);
 
         var_r(:, ii) = [S(1,1), S(2,2), S(3,3)]';
@@ -349,7 +349,7 @@ end
 function x = inv_skew_symmetric(R)
     x = zeros(3, 1);
 
-    x(1) = mean([R(2, 3), -R(3, 2)]);   % JAF reversed signs of next three eqns
-    x(2) = mean([R(3, 1), -R(1, 3)]);
-    x(3) = mean([R(1, 2), -R(2, 1)]);
+    x(1) = mean([-R(2, 3), R(3, 2)]);   
+    x(2) = mean([-R(3, 1), R(1, 3)]);
+    x(3) = mean([-R(1, 2), R(2, 1)]);
 end
