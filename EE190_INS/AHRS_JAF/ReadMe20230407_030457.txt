@@ -1,0 +1,8 @@
+1. 20s of no motion
+2. Lift up the IMU some small amount, no rotation. Move in the positive x direction for 5 s. Move in the negative x direction for 5s. Return to home position and stay unmoved for 10s.
+3 Lift up the IMU some small amount, no rotation. Move in the positive y direction for 5 s. Move in the negative y direction for 5s. Return to home position and stay unmoved for 10s. 
+4. No, rotation. Move in the negative z direction for 5 s. Move in the positive z direction for 5s. Return to home position and stay unmoved for 10s. 
+5. Lift up the IMU some small amount. Rotate positive roll 180 degrees for 5s, rotate negative roll 180 degrees for 5s. Place back at home and stay unmoved for 10s.
+6. Lift up the IMU some small amount. Rotate positive pitch 180 degrees for 5s, rotate negative pitch180 degrees for 5s. Place back at home and stay unmoved for 10s
+7. Lift up the IMU some small amount. Rotate positive yaw180 degrees for 5s, rotate negative yaw180 degrees for 5s. Place back at home and stay unmoved for 10s
+8. 20s of no motion.
