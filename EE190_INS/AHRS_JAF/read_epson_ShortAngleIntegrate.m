@@ -56,7 +56,7 @@ plot_IMU(tm, dv, dang, i_stationary, L, T, bg, ba)
 dang_hat = dang(:,1:3)-bg;  % bias should be near zero.
 Cb2n = Rn2b';
 % integrate without any corrections while stationary
-[tf, xf, stdx] = AngleIntegrate(Px, dang_hat', Cb2n, T);
+[tf, xf, stdx] = AngleIntegrate(Px, dang_hat', Cb2n', T); %KUA Input to function should be Cn2b since gets trasnposed later in function
 Lt = length(tf);
 for i=1:Lt
    E = xf(:,i);
@@ -66,14 +66,10 @@ for i=1:Lt
    % wrong. 
    % TODO: Use rho to correct Rn2b.  If correct, it should result in Cb2n'.
    % Ifnot, there is a bug here.
-   Pc = skew(rho(:, i));
-   C_corr = eye(3) + Pc;
-   C_new = C_corr * Rn2b;
+    correction = calc_Rn2b(rho(:, i)); %KUA use small angle to create correction matrix
+    C_test = Rn2b * correction; %KUA used correction 
 
-%    tf = isequal(C_new, Cb2n');
-%    if(tf)
-%        disp("Correction works correctly")
-%    end
+
 end
 plot_angles(tf,xf,stdx,bg,tf,rho);
 
