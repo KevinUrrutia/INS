@@ -22,7 +22,7 @@ avg_x = mean(x);
 if Type == 1    % accelerometer
     Elr = Euler_stationary_init(avg_x);
     Rn2b = calc_Rn2b(Elr);
-    x = x - (Rn2b * g)';    % remove gravity
+    x = x + (Rn2b * g)';    % remove gravity
     avg_x = median(x);      % recompute median
 else
     Rn2b = [];
