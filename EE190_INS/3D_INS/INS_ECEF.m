@@ -19,10 +19,12 @@ tau = mean(dt);
 
 %% Constants
 fsamp = 125;
-reset_period = 20; %s, IMU is placed back at initial position and is at rest
+reset_period = 1; %s, IMU is placed back at initial position and is at rest
 reset_samples =  reset_period*fsamp;
-plot_until = size(delta_v, 2)*tau;
-tot_samps = size(delta_v, 2);
+% plot_until = size(delta_v, 2)*tau;
+plot_until = 18*tau;
+% tot_samps = size(delta_v, 2);
+tot_samps = 18*fsamp;
 lla_o = [33.979130, -117.372570, 827]';
 r_e_o = LLA_to_ECEF(lla_o);
 g_e_o = Gravity_ECEF(r_e_o);
@@ -50,7 +52,7 @@ C_b_e_o = C_t_e_o * C_t_b_o';
 
 %% Calculate Biases
 b_omega_hat = mean(delta_th(:, 1:round(fsamp)), 2)/tau;
-b_f_hat = mean(delta_v(:, 1:round(fsamp)), 2)/tau; %- C_b_e_o'*g_e_o;
+b_f_hat = mean(delta_v(:, 1:round(fsamp)), 2)/tau + C_b_e_o'*g_e_o;
 
 b_hat = zeros(6, tot_samps);
 b_hat(1:3) = b_f_hat;
@@ -82,12 +84,12 @@ rpy = zeros(3, tot_samps);
 v_e = zeros(3, tot_samps);
 r_e = zeros(3, tot_samps);
 g_t = zeros(3, tot_samps);
-resid = zeros(9, tot_samps);
+resid = inf(9, tot_samps);
 var_rho = zeros(3, tot_samps);
 var_v_e = zeros(3, tot_samps);
 var_r_e = zeros(3, tot_samps);
 var_b = zeros(6, tot_samps);
-var_resid = inf(3, tot_samps);
+var_resid = inf(9, tot_samps);
 
 r_e(:, 1) = r_e_o;
 rpy(:, 1) = extract_rpy(C_t_b_o');
@@ -109,7 +111,7 @@ for ii = 2:tot_samps
 
     %remove biases from measurements
     delta_v(:, ii) = delta_v(:, ii) - b_hat(1:3, ii)*tau;
-    delta_th(:, ii) = delta_th(:, ii) - b_hat(4:6, ii)*tau;
+    delta_th(:, ii) = delta_th(:, ii) - b_hat(4:6, ii)*tau + + C_b_e_old'*g_e*tau;
 
     %propagate the rotation matrix
     C_b_e_new = attitude_update(C_b_e_old, delta_th(:, ii), tau);
@@ -132,16 +134,84 @@ for ii = 2:tot_samps
     %calculate Phi
     Phi = calcStateTransition(C_b_e_new, delta_v(:, ii), r_e(:, ii), g_e, lla(1), tau);
 
+    %Calculate Process Noise covariance 
+    Q_d = calcINSNoise(tau, Sra, Srg, Sba, Sbg);
+
     %Propagate State Covariance Matrix
-    P = Phi*P*Phi';
+    P = Phi*P*Phi' + Q_d;
+
+    %Earth to tangent rotation matrix
+    C_t_e = t2e(lla(1), lla(2));
+
+    %update rotation matrix
+    C_b_e_old = C_b_e_new;
+
+    %% Mesurement Update
+    if(mod(ii, (reset_period*fsamp)) == 0)
+        %re-level the IMU
+        [phi, theta] = level(delta_v(:, ii - fsamp+1:ii), fsamp);
+        psi = 0;
+        rpy_meas = [phi, theta, psi];
+        C_b_t = t2b(rpy_meas)';
+        C_b_e_o = C_t_e*C_b_t;
+        delta_C = C_b_e_o * C_b_e_old;
+        rho_skew = delta_C - eye(3);
+        rho = inv_skew_symmetric(rho_skew);
+
+        %error in velcoity
+        error_v = -v_e(:, ii);
+
+        %error in position
+        error_r = r_e_o - r_e(:, ii);
+
+        %residual constructrion
+        resid(:, ii) = [rho; error_v; error_r];
+
+        %residual covariance
+        S = H*P*H' + R;
+
+        %Kalman Gain
+        K = (P*H')/S;
+
+        %covariance update
+        P = P - K*(H*P);
+
+        %state update
+        error_state = K*resid(:, ii);
+
+        %update rotation matrix
+        Pc        = Skew_symmetric(error_state(1:3));
+        C_corr    = (eye(3) + Pc);
+        C_b_e_new = C_corr * C_b_e_old;    
+        C_b_e_old = C_b_e_new; 
+
+        %update velocity
+        v_e(:, ii) = v_e(:, ii) + error_state(4:6);
+
+        %update position
+        r_e(:, ii) = r_e(:, ii) + error_state(7:9);
+
+        %update bias
+        b_hat(:, ii) = b_hat(:, ii) + error_state(10:15);
+
+        %update gravity
+        g_e = Gravity_ECEF(r_e(:, ii));
+    
+        %calculate lat, lon, alt
+        lla = ECEF_to_LLA(r_e(:, ii));
+
+        %Earth to tangent rotation matrix
+        C_t_e = t2e(lla(1), lla(2));
+
+        %Extract residual covariance for plotting
+        var_resid(:, ii) = [S(1,1), S(2,2), S(3,3), S(4,4), S(5,5), S(6,6), S(7,7), S(8,8), S(9,9) ];
+    end
 
     %% Save Space For Plotting
-    
-    C_t_e = t2e(lla(1), lla(2));
     g_t(:, ii) = C_t_e'*g_e;
 
     %extract rpy
-    C_b_t = C_t_e'*C_b_e_new;
+    C_b_t = C_t_e'*C_b_e_old;
     rpy(:, ii) = extract_rpy(C_b_t);
 
     var_rho(:, ii) = [P(1,1), P(2,2), P(3,3)]';
@@ -288,6 +358,144 @@ plot(t(1:plot_idx), (rpy(3, 1:plot_idx)) + sqrt(var_rho(3, 1:plot_idx)), 'k.');
 xlabel("time (s)");
 ylabel("yaw (rad)");
 
+figure(7);clf
+subplot(3,1,1);
+plot(t(1:plot_idx), b_hat(1, 1:plot_idx), '.');
+grid on
+hold on
+plot(t(1:plot_idx), b_hat(1, 1:plot_idx) - sqrt(var_b(1, 1:plot_idx)), '.k');
+plot(t(1:plot_idx), b_hat(1, 1:plot_idx) + sqrt(var_b(1, 1:plot_idx)), '.k');
+title("Bias Accel");
+xlabel("time (s)");
+ylabel("b f_x (m/s^2)");
+subplot(3,1,2);
+plot(t(1:plot_idx), b_hat(2, 1:plot_idx), '.');
+grid on
+hold on
+plot(t(1:plot_idx), b_hat(2, 1:plot_idx) - sqrt(var_b(2, 1:plot_idx)), '.k');
+plot(t(1:plot_idx), b_hat(2, 1:plot_idx) + sqrt(var_b(2, 1:plot_idx)), '.k');
+xlabel("time (s)");
+ylabel("b f_y (m/s^2)");
+subplot(3,1,3);
+plot(t(1:plot_idx), b_hat(3, 1:plot_idx), '.');
+grid on
+hold on
+plot(t(1:plot_idx), b_hat(3, 1:plot_idx) - sqrt(var_b(3, 1:plot_idx)), '.k');
+plot(t(1:plot_idx), b_hat(3, 1:plot_idx) + sqrt(var_b(3, 1:plot_idx)), '.k');
+xlabel("t (s)");
+ylabel("b f_z (m/s^2)");
+
+figure(8);clf
+subplot(3,1,1);
+plot(t(1:plot_idx), b_hat(4, 1:plot_idx), '.');
+grid on
+hold on
+plot(t(1:plot_idx), b_hat(4, 1:plot_idx) - sqrt(var_b(4, 1:plot_idx)), '.k');
+plot(t(1:plot_idx), b_hat(4, 1:plot_idx) + sqrt(var_b(4, 1:plot_idx)), '.k');
+title("Bias Gyro");
+xlabel("time (s)");
+ylabel("b g_x (rad/s)");
+subplot(3,1,2);
+plot(t(1:plot_idx), b_hat(5, 1:plot_idx), '.');
+grid on
+hold on
+plot(t(1:plot_idx), b_hat(5, 1:plot_idx) - sqrt(var_b(5, 1:plot_idx)), '.k');
+plot(t(1:plot_idx), b_hat(5, 1:plot_idx) + sqrt(var_b(5, 1:plot_idx)), '.k');
+xlabel("time (s)");
+ylabel("b g_y (rad/s)");
+subplot(3,1,3);
+plot(t(1:plot_idx), b_hat(6, 1:plot_idx), '.');
+grid on
+hold on
+plot(t(1:plot_idx), b_hat(6, 1:plot_idx) - sqrt(var_b(6, 1:plot_idx)), '.k');
+plot(t(1:plot_idx), b_hat(6, 1:plot_idx) + sqrt(var_b(6, 1:plot_idx)), '.k');
+xlabel("t (s)");
+ylabel("b g_z (rad/s)");
+
+figure(9); clf;
+subplot(3, 1, 1);
+plot(t(1:tot_samps), resid(1, 1:tot_samps), 'b.');
+grid on
+hold on
+plot(t(1:tot_samps), -sqrt(var_resid(1, 1:tot_samps)), 'k.');
+plot(t(1:tot_samps), sqrt(var_resid(1, 1:tot_samps)), 'k.');
+title("Residual and Covariance For Attitude");
+xlabel("time");
+ylabel("Error Attitude X");
+subplot(3, 1, 2);
+plot(t(1:tot_samps), resid(2, 1:tot_samps), 'b.');
+grid on
+hold on
+plot(t(1:tot_samps), -sqrt(var_resid(2, 1:tot_samps)), 'k.');
+plot(t(1:tot_samps), sqrt(var_resid(2, 1:tot_samps)), 'k.');
+title("Error Attitude Y");
+xlabel("time");
+ylabel("Error Attitude Y");
+subplot(3, 1, 3);
+plot(t(1:tot_samps), resid(3, 1:tot_samps), 'b.');
+grid on
+hold on
+plot(t(1:tot_samps), -sqrt(var_resid(3, 1:tot_samps)), 'k.');
+plot(t(1:tot_samps), sqrt(var_resid(3, 1:tot_samps)), 'k.');
+title("Error Attitude Z");
+xlabel("time");
+ylabel("Error Attitude Z");
+
+figure(10); clf;
+subplot(3, 1, 1);
+plot(t(1:tot_samps), resid(4, 1:tot_samps), 'b.');
+grid on
+hold on
+plot(t(1:tot_samps), -sqrt(var_resid(4, 1:tot_samps)), 'k.');
+plot(t(1:tot_samps), sqrt(var_resid(4, 1:tot_samps)), 'k.');
+title("Residual and Covariance For Velocity");
+xlabel("time");
+ylabel("Error Velocity X [m/s]");
+subplot(3, 1, 2);
+plot(t(1:tot_samps), resid(5, 1:tot_samps), 'b.');
+grid on
+hold on
+plot(t(1:tot_samps), -sqrt(var_resid(5, 1:tot_samps)), 'k.');
+plot(t(1:tot_samps), sqrt(var_resid(5, 1:tot_samps)), 'k.');
+xlabel("time");
+ylabel("Error Velocity Y [m/s]");
+subplot(3, 1, 3);
+plot(t(1:tot_samps), resid(6, 1:tot_samps), 'b.');
+grid on
+hold on
+plot(t(1:tot_samps), -sqrt(var_resid(6, 1:tot_samps)), 'k.');
+plot(t(1:tot_samps), sqrt(var_resid(6, 1:tot_samps)), 'k.');
+xlabel("time");
+ylabel("Error Velocity Z [m/s]");
+
+figure(11); clf;
+subplot(3, 1, 1);
+plot(t(1:tot_samps), resid(7, 1:tot_samps), 'b.');
+grid on
+hold on
+plot(t(1:tot_samps), -sqrt(var_resid(7, 1:tot_samps)), 'k.');
+plot(t(1:tot_samps), sqrt(var_resid(7, 1:tot_samps)), 'k.');
+title("Residual and Covariance For Position");
+xlabel("time");
+ylabel("Error Position X [m]");
+subplot(3, 1, 2);
+plot(t(1:tot_samps), resid(8, 1:tot_samps), 'b.');
+grid on
+hold on
+plot(t(1:tot_samps), -sqrt(var_resid(8, 1:tot_samps)), 'k.');
+plot(t(1:tot_samps), sqrt(var_resid(8, 1:tot_samps)), 'k.');
+xlabel("time");
+ylabel("Error Position Y [m]");
+subplot(3, 1, 3);
+plot(t(1:tot_samps), resid(9, 1:tot_samps), 'b.');
+grid on
+hold on
+plot(t(1:tot_samps), -sqrt(var_resid(9, 1:tot_samps)), 'k.');
+plot(t(1:tot_samps), sqrt(var_resid(9, 1:tot_samps)), 'k.');
+xlabel("time");
+ylabel("Error Position Z [m]");
+
+
 %% functions
 function  [phi, theta] = level(delta_v, fsamp)
     theta_arr = zeros(1, 1*fsamp);
@@ -382,7 +590,7 @@ end
 function Phi = calcStateTransition(C_b_e, alpha, r_e, g_e, lat, tau)
     Phi = eye(15);
 
-    F_21 = Skew_symmetric(-(C_b_e*alpha*tau));
+    F_21 = -Skew_symmetric((C_b_e*alpha))*tau;
 
     lat = lat*(pi/180);
     e = 0.0818191908425; %WSG84 Ecentricity
@@ -390,7 +598,7 @@ function Phi = calcStateTransition(C_b_e, alpha, r_e, g_e, lat, tau)
     Re = Ro / sqrt(1 - e^2*sin(lat)^2);
     r_es_e = Re*sqrt(cos(lat)^2 + (1 - e^2)^2*sin(lat)^2);
 
-    F_23 = -((2*g_e)*(r_es_e))*((r_e')./norm(r_e));
+    F_23 = -((2*g_e)./(r_es_e))*((r_e')./norm(r_e));
 
     omega_ie = 7.292115E-5;  % Earth rotation rate (rad/s) 
     wie = [0, 0, omega_ie]';
@@ -398,12 +606,30 @@ function Phi = calcStateTransition(C_b_e, alpha, r_e, g_e, lat, tau)
     Omega_ie_e = Skew_symmetric(wie);
 
     Phi(1:3, 1:3) = eye(3) - Omega_ie_e*tau;
-    Phi(1:3, 13:15) = C_b_e*tau;
+    Phi(1:3, 13:15) = -C_b_e*tau;
     Phi(4:6, 1:3) = F_21*tau;
     Phi(4:6, 4:6) = eye(3)-2*Omega_ie_e*tau;
     Phi(4:6, 7:9) = F_23*tau;
-    Phi(4:6, 10:12) = C_b_e*tau;
+    Phi(4:6, 10:12) = -C_b_e*tau;
     Phi(7:9, 4:6) = eye(3)*tau;
+end
+
+function Q_d = calcINSNoise(tau, Sra, Srg, Sba, Sbg)
+    Q_d = zeros(15, 15);
+
+    Q_d(1:3, 1:3) = Srg*eye(3);
+    Q_d(4:6, 4:6) = Sra*eye(3);
+    Q_d(10:12, 10:12) = Sba*eye(3);
+    Q_d(13:15, 13:15) = Sbg*eye(3);
+    Q_d = Q_d*tau;
+end
+
+function x = inv_skew_symmetric(R)
+    x = zeros(3, 1);
+
+    x(1) = mean([-R(2, 3),R(3, 2)]);
+    x(2) = mean([-R(3, 1), R(1, 3)]);
+    x(3) = mean([-R(1, 2), R(2, 1)]);
 end
 
 function r_e = LLA_to_ECEF(lla) 
