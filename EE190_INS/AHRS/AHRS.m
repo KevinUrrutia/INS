@@ -1,7 +1,7 @@
 clear; clc; 
 
 %% load in the data
-T = readtable("Epson_G370_20230407_030457.csv");
+T = readtable("/home/kevinurrutia/INS/EE190_INS/data/Epson_G370_20230407_030457.csv");
 %create vectors of the data
 delta_v = [T.delta_v_x, T.delta_v_y, T.delta_v_z]';
 delta_th = [T.delta_th_x, T.delta_th_y, T.delta_th_z]';
