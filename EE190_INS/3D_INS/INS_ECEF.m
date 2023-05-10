@@ -19,12 +19,12 @@ tau = mean(dt);
 
 %% Constants
 fsamp = 125;
-reset_period = 1; %s, IMU is placed back at initial position and is at rest
+reset_period = 20; %s, IMU is placed back at initial position and is at rest
 reset_samples =  reset_period*fsamp;
-% plot_until = size(delta_v, 2)*tau;
-plot_until = 18*tau;
-% tot_samps = size(delta_v, 2);
-tot_samps = 18*fsamp;
+plot_until = size(delta_v, 2)*tau;
+% plot_until = 20;
+tot_samps = size(delta_v, 2);
+% tot_samps = 20*fsamp;
 lla_o = [33.979130, -117.372570, 827]';
 r_e_o = LLA_to_ECEF(lla_o);
 g_e_o = Gravity_ECEF(r_e_o);
@@ -52,7 +52,7 @@ C_b_e_o = C_t_e_o * C_t_b_o';
 
 %% Calculate Biases
 b_omega_hat = mean(delta_th(:, 1:round(fsamp)), 2)/tau;
-b_f_hat = mean(delta_v(:, 1:round(fsamp)), 2)/tau + C_b_e_o'*g_e_o;
+b_f_hat = mean(delta_v(:, 1:round(fsamp)), 2)/tau; %+ C_b_e_o'*g_e_o;
 
 b_hat = zeros(6, tot_samps);
 b_hat(1:3) = b_f_hat;
@@ -110,8 +110,8 @@ for ii = 2:tot_samps
     b_hat(:, ii) = b_hat(:, ii - 1);
 
     %remove biases from measurements
-    delta_v(:, ii) = delta_v(:, ii) - b_hat(1:3, ii)*tau;
-    delta_th(:, ii) = delta_th(:, ii) - b_hat(4:6, ii)*tau + + C_b_e_old'*g_e*tau;
+    delta_v(:, ii) = delta_v(:, ii) - b_hat(1:3, ii)*tau - C_b_e_old'*g_e*tau;
+    delta_th(:, ii) = delta_th(:, ii) - b_hat(4:6, ii)*tau;
 
     %propagate the rotation matrix
     C_b_e_new = attitude_update(C_b_e_old, delta_th(:, ii), tau);
@@ -153,8 +153,8 @@ for ii = 2:tot_samps
         psi = 0;
         rpy_meas = [phi, theta, psi];
         C_b_t = t2b(rpy_meas)';
-        C_b_e_o = C_t_e*C_b_t;
-        delta_C = C_b_e_o * C_b_e_old;
+        C_b_e_meas = C_t_e*C_b_t;
+        delta_C = C_b_e_meas * C_b_e_old';
         rho_skew = delta_C - eye(3);
         rho = inv_skew_symmetric(rho_skew);
 
