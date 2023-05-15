@@ -52,7 +52,7 @@ C_b_e_o = C_t_e_o * C_t_b_o';
 
 %% Calculate Biases
 b_omega_hat = mean(delta_th(:, 1:round(fsamp)), 2)/tau;
-b_f_hat = mean(delta_v(:, 1:round(fsamp)), 2)/tau; %+ C_b_e_o'*g_e_o;
+b_f_hat = mean(delta_v(:, 1:round(fsamp)), 2)/tau + C_b_e_o'*g_e_o;
 
 b_hat = zeros(6, tot_samps);
 b_hat(1:3) = b_f_hat;
@@ -110,7 +110,7 @@ for ii = 2:tot_samps
     b_hat(:, ii) = b_hat(:, ii - 1);
 
     %remove biases from measurements
-    delta_v(:, ii) = delta_v(:, ii) - b_hat(1:3, ii)*tau - C_b_e_old'*g_e*tau;
+    delta_v(:, ii) = delta_v(:, ii) - b_hat(1:3, ii)*tau;
     delta_th(:, ii) = delta_th(:, ii) - b_hat(4:6, ii)*tau;
 
     %propagate the rotation matrix
@@ -590,7 +590,7 @@ end
 function Phi = calcStateTransition(C_b_e, alpha, r_e, g_e, lat, tau)
     Phi = eye(15);
 
-    F_21 = -Skew_symmetric((C_b_e*alpha))*tau;
+    F_21 = Skew_symmetric((C_b_e*alpha))*tau;
 
     lat = lat*(pi/180);
     e = 0.0818191908425; %WSG84 Ecentricity
@@ -607,8 +607,8 @@ function Phi = calcStateTransition(C_b_e, alpha, r_e, g_e, lat, tau)
 
     Phi(1:3, 1:3) = eye(3) - Omega_ie_e*tau;
     Phi(1:3, 13:15) = -C_b_e*tau;
-    Phi(4:6, 1:3) = F_21*tau;
-    Phi(4:6, 4:6) = eye(3)-2*Omega_ie_e*tau;
+    Phi(4:6, 1:3) = -F_21*tau;
+    Phi(4:6, 4:6) = eye(3) + 2*Omega_ie_e*tau;
     Phi(4:6, 7:9) = F_23*tau;
     Phi(4:6, 10:12) = -C_b_e*tau;
     Phi(7:9, 4:6) = eye(3)*tau;
