@@ -1,7 +1,7 @@
 clear; clc;
 
 %% load in the data
-T = readtable("/home/kevinurrutia/INS/EE190_INS/data/Epson_G370_20230407_030457.csv");
+T = readtable("C:\Users\urrut\Downloads\INS-main\INS-main\EE190_INS\data\Epson_G370_20230407_030457.csv");
 %create vector from the data
 delta_v = [T.delta_v_x, T.delta_v_y, T.delta_v_z]';
 delta_th = [T.delta_th_x, T.delta_th_y, T.delta_th_z]';
@@ -21,10 +21,10 @@ tau = mean(dt);
 fsamp = 125;
 reset_period = 20; %s, IMU is placed back at initial position and is at rest
 reset_samples =  reset_period*fsamp;
-plot_until = size(delta_v, 2)*tau;
-% plot_until = 20;
-tot_samps = size(delta_v, 2);
-% tot_samps = 20*fsamp;
+% plot_until = size(delta_v, 2)*tau;
+plot_until = 80;
+% tot_samps = size(delta_v, 2);
+tot_samps = 80*fsamp;
 lla_o = [33.979130, -117.372570, 827]';
 r_e_o = LLA_to_ECEF(lla_o);
 g_e_o = Gravity_ECEF(r_e_o);
@@ -62,7 +62,7 @@ b_hat(4:6) = b_omega_hat;
 P = zeros(15, 15);
 b_omega_var = var(delta_th(:,1:round(fsamp))/tau, 0, 2);
 b_f_var = var(delta_v(:,1:round(fsamp))/tau, 0, 2);
-var_rho = diag([.1, .1, 0.01].^2); %[rad]
+var_rho = diag([.01, .01, 0.01].^2); %[rad]
 sigma_v_e = 0.1; %[m/s]
 sigma_r_e = 0.1; %[m]
 P(1:3, 1:3) = var_rho;
@@ -279,28 +279,28 @@ ylabel("g_z (m/s^2)");
 
 figure(4); clf;
 subplot(3, 1, 1);
-plot(t(1:plot_idx), r_e(1, 1:plot_idx), '.');
+plot(t(1:plot_idx), r_e(1, 1:plot_idx) - r_e_o(1,1), '.');
 grid on;
 hold on;
-plot(t(1:plot_idx),(r_e(1, 1:plot_idx)) - sqrt(var_r_e(1, 1:plot_idx)), 'k.');
-plot(t(1:plot_idx),(r_e(1, 1:plot_idx)) + sqrt(var_r_e(1, 1:plot_idx)), 'k.');
+plot(t(1:plot_idx),(r_e(1, 1:plot_idx)) - r_e_o(1,1) - sqrt(var_r_e(1, 1:plot_idx)), 'k.');
+plot(t(1:plot_idx),(r_e(1, 1:plot_idx)) - r_e_o(1,1) + sqrt(var_r_e(1, 1:plot_idx)), 'k.');
 xlabel("time (s)");
 ylabel("r_x (m)");
 title("Position in Earth frame for entire run.")
 subplot(3, 1, 2);
-plot(t(1:plot_idx), r_e(2, 1:plot_idx), '.');
+plot(t(1:plot_idx), r_e(2, 1:plot_idx) - r_e_o(2,1), '.');
 grid on;
 hold on;
-plot(t(1:plot_idx),(r_e(2, 1:plot_idx)) - sqrt(var_r_e(2, 1:plot_idx)), 'k.');
-plot(t(1:plot_idx),(r_e(2, 1:plot_idx)) + sqrt(var_r_e(2, 1:plot_idx)), 'k.');
+plot(t(1:plot_idx),(r_e(2, 1:plot_idx)) - r_e_o(2,1) - sqrt(var_r_e(2, 1:plot_idx)) , 'k.');
+plot(t(1:plot_idx),(r_e(2, 1:plot_idx)) - r_e_o(2, 1) + sqrt(var_r_e(2, 1:plot_idx)), 'k.');
 xlabel("time (s)");
 ylabel("r_y (m)");
 subplot(3, 1, 3);
-plot(t(1:plot_idx), r_e(3, 1:plot_idx), '.');
+plot(t(1:plot_idx), r_e(3, 1:plot_idx) - r_e_o(3, 1), '.');
 grid on;
 hold on;
-plot(t(1:plot_idx),(r_e(3, 1:plot_idx)) - sqrt(var_r_e(3, 1:plot_idx)), 'k.');
-plot(t(1:plot_idx),(r_e(3, 1:plot_idx)) + sqrt(var_r_e(3, 1:plot_idx)), 'k.');
+plot(t(1:plot_idx),(r_e(3, 1:plot_idx)) - r_e_o(3,1) - sqrt(var_r_e(3, 1:plot_idx)), 'k.');
+plot(t(1:plot_idx),(r_e(3, 1:plot_idx)) - r_e_o(3,1) + sqrt(var_r_e(3, 1:plot_idx)), 'k.');
 xlabel("time (s)");
 ylabel("r_y (m)");
 
