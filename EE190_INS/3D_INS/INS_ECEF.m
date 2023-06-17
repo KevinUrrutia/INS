@@ -2,7 +2,6 @@ clear; clc;
 
 %% load in the data
 T = readtable("/home/kevinurrutia/INS/EE190_INS/data/Epson_G370_20230407_030457.csv");
-%create vector from the data
 delta_v = [T.delta_v_x, T.delta_v_y, T.delta_v_z]';
 delta_th = [T.delta_th_x, T.delta_th_y, T.delta_th_z]';
 delta_th = delta_th * (pi/180); %covert to radians
@@ -21,23 +20,26 @@ tau = mean(dt);
 fsamp = 125;
 reset_period = 20; %s, IMU is placed back at initial position and is at rest
 reset_samples =  reset_period*fsamp;
-plot_until = size(delta_v, 2)*tau;
-% plot_until = 20;
-tot_samps = size(delta_v, 2);
-% tot_samps = 20*fsamp;
+% plot_until = size(delta_v, 2)*tau;
+plot_until = 100;
+% tot_samps = size(delta_v, 2);
+tot_samps = 100*fsamp;
 lla_o = [33.979130, -117.372570, 827]';
 r_e_o = LLA_to_ECEF(lla_o);
 g_e_o = Gravity_ECEF(r_e_o);
-Srg = ((1e-3)*(pi/180))^2;
-B = ((0.9*(1/3600)*(pi/180)))/0.664; %(rad/s)/0.664 = B
-Tb = 32; %s
-Sbg = (2*B^2*log(2))/(pi*(0.4365)^2*(Tb));
-G = 9.80065;%[m/s^2]
-t_b = 100; %[s] flat region of ASD curve
-Sra = ((50e-6)*G)^2; %N ([m/s^2]^2)/Hz
-Tb = t_b / 1.89;
-B = ((8e-6)*G)/0664;
-Sba = (2*(B)^2*log(2)) / (pi*(0.4365)^2*(Tb));
+G = 9.80065; %[m/s^2]
+N = 3.6 *(pi/180) * (1/3600);
+Srg = N^2;
+B = 0.9 * (pi/180) * (1/3600);
+Tb = 60 / 1.89;
+Sbg = (2*B^2*log(2)) / (pi*(0.4365)^2*Tb);
+
+N = 50 * G * 1e-6;
+Sra = N^2;
+
+B = 12.0482 * G * 1e-6;
+Tb = 100 / 1.89;
+Sba = (2*B^2*log(2)) / (pi*(0.4365)^2*Tb);
 
 
 %% Level IMU
@@ -62,9 +64,9 @@ b_hat(4:6) = b_omega_hat;
 P = zeros(15, 15);
 b_omega_var = var(delta_th(:,1:round(fsamp))/tau, 0, 2);
 b_f_var = var(delta_v(:,1:round(fsamp))/tau, 0, 2);
-var_rho = diag([.1, .1, 0.01].^2); %[rad]
-sigma_v_e = 0.1; %[m/s]
-sigma_r_e = 0.1; %[m]
+var_rho = diag([.01, .01, 0.01].^2); %[rad]
+sigma_v_e = 0.01; %[m/s]
+sigma_r_e = 0.01; %[m]
 P(1:3, 1:3) = var_rho;
 P(4:6, 4:6) = sigma_v_e^2*eye(3);
 P(7:9, 7:9) = sigma_r_e^2*eye(3);
@@ -72,7 +74,7 @@ P(10:12, 10:12) = diag(b_f_var);
 P(13:15, 13:15) = diag(b_omega_var);
 
 %% Initialize Meausurement Noise Covariance Matrix
-sigma_meas = 1e-4;
+sigma_meas = 1e-6;
 R = sigma_meas^2*eye(9);
 
 %% Initialize Measurement Observation Matrix
@@ -103,6 +105,9 @@ var_b(:, 1) = [P(10,10), P(11,11), P(12,12), P(13,13), P(14,14), P(15,15)]';
 C_b_e_old = C_b_e_o;
 C_b_e_new = C_b_e_o;
 g_e = g_e_o;
+
+stationary_arr = [33*fsamp, 34*fsamp, 35*fsamp, 53*fsamp, 54*fsamp, 55*fsamp,...
+     73*fsamp, 74*fsamp, 75*fsamp, 92*fsamp, 93*fsamp, 94*fsamp, 95*fsamp];
 for ii = 2:tot_samps
     tau = t(ii) - t(ii - 1);
 
@@ -117,7 +122,7 @@ for ii = 2:tot_samps
     C_b_e_new = attitude_update(C_b_e_old, delta_th(:, ii), tau);
 
     %integrated specific force rotation
-    nu_e = int_specific_force_rot(delta_v(:, ii), C_b_e_old, C_b_e_new);
+    nu_e = int_specific_force_rot(delta_v(:, ii), C_b_e_old, delta_th(:, ii), tau);
 
     %velocity update
     v_e(:, ii) = velocity_update(v_e(:, ii - 1), nu_e, g_e, tau);
@@ -147,7 +152,8 @@ for ii = 2:tot_samps
     C_b_e_old = C_b_e_new;
 
     %% Mesurement Update
-    if(mod(ii, (reset_period*fsamp)) == 0)
+    if((mod(ii, (reset_period*fsamp)) == 0) || ((ii < reset_period*fsamp) && (mod(ii, (1*fsamp)) == 0))|| ((ii > 142*fsamp) && (mod(ii, (4*fsamp)) == 0)) ...
+            || (any(stationary_arr(:) == ii)))
         %re-level the IMU
         [phi, theta] = level(delta_v(:, ii - fsamp+1:ii), fsamp);
         psi = 0;
@@ -174,7 +180,8 @@ for ii = 2:tot_samps
         K = (P*H')/S;
 
         %covariance update
-        P = P - K*(H*P);
+%         P = P - K*(H*P);
+        P = (eye(15) - K*H)*P*(eye(15) - K*H)' + K*R*K'; %Joseph form
 
         %state update
         error_state = K*resid(:, ii);
@@ -192,7 +199,8 @@ for ii = 2:tot_samps
         r_e(:, ii) = r_e(:, ii) + error_state(7:9);
 
         %update bias
-        b_hat(:, ii) = b_hat(:, ii) + error_state(10:15);
+        b_hat(1:3, ii) = b_hat(1:3, ii) +  error_state(10:12);
+        b_hat(4:6, ii) = b_hat(4:6, ii) + error_state(13:15);
 
         %update gravity
         g_e = Gravity_ECEF(r_e(:, ii));
@@ -279,30 +287,30 @@ ylabel("g_z (m/s^2)");
 
 figure(4); clf;
 subplot(3, 1, 1);
-plot(t(1:plot_idx), r_e(1, 1:plot_idx), '.');
+plot(t(1:plot_idx), r_e(1, 1:plot_idx) - r_e_o(1,1), '.');
 grid on;
 hold on;
-plot(t(1:plot_idx),(r_e(1, 1:plot_idx)) - sqrt(var_r_e(1, 1:plot_idx)), 'k.');
-plot(t(1:plot_idx),(r_e(1, 1:plot_idx)) + sqrt(var_r_e(1, 1:plot_idx)), 'k.');
+plot(t(1:plot_idx),(r_e(1, 1:plot_idx)) - r_e_o(1,1) - sqrt(var_r_e(1, 1:plot_idx)), 'k.');
+plot(t(1:plot_idx),(r_e(1, 1:plot_idx)) - r_e_o(1,1) + sqrt(var_r_e(1, 1:plot_idx)), 'k.');
 xlabel("time (s)");
 ylabel("r_x (m)");
 title("Position in Earth frame for entire run.")
 subplot(3, 1, 2);
-plot(t(1:plot_idx), r_e(2, 1:plot_idx), '.');
+plot(t(1:plot_idx), r_e(2, 1:plot_idx) - r_e_o(2,1), '.');
 grid on;
 hold on;
-plot(t(1:plot_idx),(r_e(2, 1:plot_idx)) - sqrt(var_r_e(2, 1:plot_idx)), 'k.');
-plot(t(1:plot_idx),(r_e(2, 1:plot_idx)) + sqrt(var_r_e(2, 1:plot_idx)), 'k.');
+plot(t(1:plot_idx),(r_e(2, 1:plot_idx)) - r_e_o(2,1) - sqrt(var_r_e(2, 1:plot_idx)) , 'k.');
+plot(t(1:plot_idx),(r_e(2, 1:plot_idx)) - r_e_o(2, 1) + sqrt(var_r_e(2, 1:plot_idx)), 'k.');
 xlabel("time (s)");
 ylabel("r_y (m)");
 subplot(3, 1, 3);
-plot(t(1:plot_idx), r_e(3, 1:plot_idx), '.');
+plot(t(1:plot_idx), r_e(3, 1:plot_idx) - r_e_o(3, 1), '.');
 grid on;
 hold on;
-plot(t(1:plot_idx),(r_e(3, 1:plot_idx)) - sqrt(var_r_e(3, 1:plot_idx)), 'k.');
-plot(t(1:plot_idx),(r_e(3, 1:plot_idx)) + sqrt(var_r_e(3, 1:plot_idx)), 'k.');
+plot(t(1:plot_idx),(r_e(3, 1:plot_idx)) - r_e_o(3,1) - sqrt(var_r_e(3, 1:plot_idx)), 'k.');
+plot(t(1:plot_idx),(r_e(3, 1:plot_idx)) - r_e_o(3,1) + sqrt(var_r_e(3, 1:plot_idx)), 'k.');
 xlabel("time (s)");
-ylabel("r_y (m)");
+ylabel("r_z (m)");
 
 figure(5); clf;
 subplot(3, 1, 1);
@@ -526,6 +534,7 @@ function C_t_b = t2b(delta_th)
    C_t_b(3, 3) = cos(phi)*cos(theta);
 end
 
+
 function C_t_e = t2e(lat, lon)
     lat = lat * (pi/180);
     lon = lon * (pi/180);
@@ -548,15 +557,42 @@ end
 function C_b_e_new = attitude_update(C_b_e_old, alpha, tau)
     omega_ie = 7.292115E-5;  % Earth rotation rate (rad/s) 
     wie = [0, 0, omega_ie]';
+    alpha_ie = wie*tau;
+    C_e = [cos(alpha_ie(3)), sin(alpha_ie(3)), 0;...
+          -sin(alpha_ie(3)), cos(alpha_ie(3)), 0;...
+                       0,             0,  1];
+    Alpha_ib_b = Skew_symmetric(alpha);
+    mag_alpha = sqrt(alpha'*alpha);
 
-    Omega_ie_e = Skew_symmetric(wie);
-    Omega_ib_b = Skew_symmetric(alpha);
+    if mag_alpha>1.E-8
+    C_new_old = eye(3) + sin(mag_alpha) / mag_alpha * Alpha_ib_b +...
+        (1 - cos(mag_alpha)) / mag_alpha^2 * Alpha_ib_b * Alpha_ib_b;
+    else
+        C_new_old = eye(3) + Alpha_ib_b;
+    end     
 
-    C_b_e_new = C_b_e_old*(eye(3) + Omega_ib_b) - Omega_ie_e*C_b_e_old*tau;
+    C_b_e_new = C_e * C_b_e_old * C_new_old;
 end
 
-function nu_e = int_specific_force_rot(nu_b, C_b_e_old, C_b_e_new)
-    nu_e = (1/2)*(C_b_e_old + C_b_e_new)*nu_b;
+function nu_e = int_specific_force_rot(nu_b, C_b_e_old, alpha, tau)
+    omega_ie = 7.292115E-5;  % Earth rotation rate (rad/s) 
+    wie = [0, 0, omega_ie]';
+    alpha_ie = wie*tau;
+
+    Alpha_ib_b = Skew_symmetric(alpha);
+    mag_alpha = sqrt(alpha'*alpha);
+
+    if mag_alpha>1.E-8
+        ave_C_b_e = C_b_e_old * (eye(3) + (1 - cos(mag_alpha)) / mag_alpha^2 ...
+        * Alpha_ib_b + (1 - sin(mag_alpha) / mag_alpha) / mag_alpha^2 ...
+        * Alpha_ib_b * Alpha_ib_b) - 0.5 * Skew_symmetric([0;0;alpha_ie])...
+        * C_b_e_old;
+    else
+        ave_C_b_e = C_b_e_old - 0.5 * Skew_symmetric([0;0;alpha_ie]) *...
+         C_b_e_old;
+    end
+
+    nu_e = ave_C_b_e*nu_b;
 end
 
 function v_e_new = velocity_update(v_e_old, nu_e, g_e, tau)
@@ -565,11 +601,11 @@ function v_e_new = velocity_update(v_e_old, nu_e, g_e, tau)
 
     Omega_ie_e = Skew_symmetric(wie);
 
-    v_e_new = v_e_old + nu_e + (g_e - 2*Omega_ie_e*v_e_old)*tau;
+    v_e_new = v_e_old + nu_e + tau * (g_e - 2 * Omega_ie_e * v_e_old);
 end
 
 function r_e_new = position_update(r_e_old, v_e_old, v_e_new, tau)
-    r_e_new = r_e_old + (v_e_old + v_e_new)*(tau/2);
+    r_e_new = r_e_old + (v_e_new + v_e_old) * 0.5 * tau;
 end
 
 function A = Skew_symmetric(a)
@@ -587,18 +623,16 @@ function rpy = extract_rpy(C_b_t)
     rpy = [(phi), (theta), (psi)]';
 end
 
-function Phi = calcStateTransition(C_b_e, alpha, r_e, g_e, lat, tau)
+function Phi = calcStateTransition(C_b_e, alpha, r_e, g_e, L_b, tau)
     Phi = eye(15);
 
-    F_21 = Skew_symmetric((C_b_e*alpha))*tau;
+    F_21 = -Skew_symmetric((C_b_e*alpha));
 
-    lat = lat*(pi/180);
+    L_b = L_b*(pi/180);
     e = 0.0818191908425; %WSG84 Ecentricity
     Ro = 6378137; %[m] WGS84 Equitorial Radius of Earth
-    Re = Ro / sqrt(1 - e^2*sin(lat)^2);
-    r_es_e = Re*sqrt(cos(lat)^2 + (1 - e^2)^2*sin(lat)^2);
-
-    F_23 = -((2*g_e)./(r_es_e))*((r_e')./norm(r_e));
+    geocentric_radius = Ro / sqrt(1 - (e * sin(L_b))^2) *...
+                sqrt(cos(L_b)^2 + (1 - e^2)^2 * sin(L_b)^2);
 
     omega_ie = 7.292115E-5;  % Earth rotation rate (rad/s) 
     wie = [0, 0, omega_ie]';
@@ -607,9 +641,11 @@ function Phi = calcStateTransition(C_b_e, alpha, r_e, g_e, lat, tau)
 
     Phi(1:3, 1:3) = eye(3) - Omega_ie_e*tau;
     Phi(1:3, 13:15) = -C_b_e*tau;
-    Phi(4:6, 1:3) = -F_21*tau;
+    Phi(4:6, 1:3) = F_21;
     Phi(4:6, 4:6) = eye(3) + 2*Omega_ie_e*tau;
-    Phi(4:6, 7:9) = F_23*tau;
+    Phi(4:6, 7:9) = -tau * 2 * g_e /...
+                geocentric_radius * r_e' / sqrt (r_e' *...
+                r_e);
     Phi(4:6, 10:12) = -C_b_e*tau;
     Phi(7:9, 4:6) = eye(3)*tau;
 end
@@ -655,36 +691,36 @@ function lla = ECEF_to_LLA(r_e)
     z = r_e(3);
 
     a=6378137.0;
-        % e=0.08181919092890624;
-        f = 1/298.257223563; % flattening factor of wgs84 (oblate) spheriod of Earth 
-        e_sq = (2*f - f^2);
-        e = sqrt(e_sq);
+    % e=0.08181919092890624;
+    f = 1/298.257223563; % flattening factor of wgs84 (oblate) spheriod of Earth 
+    e_sq = (2*f - f^2);
+    e = sqrt(e_sq);
 
-        p=sqrt(x.^2+y.^2);
-        [n,m] = size(x);
-        % Initializes Newton-Raphson
-        k_new=1/(1-e^2)*ones(n,m);
-        err_threshold=0.0001*ones(n,m);
-        err=1*ones(n,m);
-        % Iterates Newton-Raphson
-        while any(err>err_threshold)
-            k_old=k_new;
-            ci=(p.^2+(1-e^2)*z.^2.*k_old.^2).^(3/2)/(a*e^2);
-            k_new=1+(p.^2+(1-e^2)*z.^2.*k_old.^3)./(ci-p.^2);
-            err=abs(k_new-k_old);
-        end
-        k=k_new;
+    p=sqrt(x.^2+y.^2);
+    [n,m] = size(x);
+    % Initializes Newton-Raphson
+    k_new=1/(1-e^2)*ones(n,m);
+    err_threshold=0.0001*ones(n,m);
+    err=1*ones(n,m);
+    % Iterates Newton-Raphson
+    while any(err>err_threshold)
+        k_old=k_new;
+        ci=(p.^2+(1-e^2)*z.^2.*k_old.^2).^(3/2)/(a*e^2);
+        k_new=1+(p.^2+(1-e^2)*z.^2.*k_old.^3)./(ci-p.^2);
+        err=abs(k_new-k_old);
+    end
+    k=k_new;
 
-        lon=atan2(y,x); % Calculate longitude
-        lat=atan2(z.*k,p);   % Calculate latitude
-        % if lon>pi
-        %     lon=lon-2*pi;   % Ensures longitude is [-pi,pi)
-        % end
+    lon=atan2(y,x); % Calculate longitude
+    lat=atan2(z.*k,p);   % Calculate latitude
+    % if lon>pi
+    %     lon=lon-2*pi;   % Ensures longitude is [-pi,pi)
+    % end
 
-        Rn = a./sqrt(1-e^2*sin(lat).^2);
-        alt = p./cos(lat) - Rn;
+    Rn = a./sqrt(1-e^2*sin(lat).^2);
+    alt = p./cos(lat) - Rn;
 
-        lla = [[lat, lon]*(180/pi), alt];
+    lla = [[lat, lon]*(180/pi), alt];
 end
 
 function g_e = Gravity_ECEF(r_e)
