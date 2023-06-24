@@ -37,7 +37,7 @@ ini_rpy = [ini_phi, ini_theta, ini_psi];
 rpy = inf(3, tot_samps);
 r = inf(3, tot_samps);
 b = inf(3, tot_samps);
-a = zeros(3, tot_samps);
+a = zeros(6, tot_samps);
 c = zeros(3, tot_samps);
 Phi_tensor = zeros(6, 6, tot_samps);
 H_tensor = zeros(3, 6, tot_samps);
@@ -55,11 +55,12 @@ P(1:3, 1:3) = sigma_rho^2*eye(3);
 P(4:6, 4:6) = blkdiag(bias_var(1), bias_var(2), bias_var(3));
 
 %setup measurement noise matrix
-Q = zeros(6,6);
+Q_tensor = zeros(6, 6, tot_samps);
 
 %initialize the measurement covariance matrix
 sig_meas = 1e-4; %[rad] error in measurement
 R = sig_meas^2 * eye(3);
+R_tensor = zeros(3, 3, tot_samps);
 
 %Measurement Matrix
 H = zeros(3, 6);
@@ -81,7 +82,7 @@ thresh_rho = 0.01; %the error between the attitude should be less than 0.01 rad
 while norm(delta(1:3), 1) > thresh_rho
     for ii = 1:reset_samples:tot_samps - reset_samples
         %propagate the AHRS until the next measurement
-        [C_b_t_hat, b_hat, rpy_hat, Phi_accum, a(:, ii)] = AHRS(C_b_t_old, b(:, ii), delta_th(:, ii:ii + reset_samples), tau);
+        [C_b_t_hat, b_hat, rpy_hat, Phi_accum, a(:, ii), Q_accum] = AHRS(C_b_t_old, b(:, ii), delta_th(:, ii:ii + reset_samples), tau, Sbg, Srg);
 
         %construct measurement residuals
         c(:, ii) = measDiff(delta_v(:, ii: ii + reset_samples), C_b_t_hat, fsamp);
@@ -89,6 +90,8 @@ while norm(delta(1:3), 1) > thresh_rho
         %save tensors
         Phi_tensor(:, :, ii) = Phi_accum;
         H_tensor(:, :, ii) = H;
+        Q_tensor(:, :, ii) = Q_accum;
+        R_tensor(:, :, ii) = R;
 
         %save for plotting
         rpy(:, ii:ii + reset_samples) = rpy_hat;
@@ -103,8 +106,11 @@ while norm(delta(1:3), 1) > thresh_rho
     a(:, span) = [];
     Phi_tensor(:, :, span) = [];
     H_tensor(:, :, span) = [];
+    Q_tensor(:, :, span) = [];
+    R_tensor(:, :, span) = [];
     %Construct Smoothing matrices
-    [A, B] = smoothMat(c, a, H_tensor, Phi_tensor);
+    [A, B] = smoothMat(c, a, H_tensor, Phi_tensor, Q_tensor, R_tensor);
+    delta = computeDelta(A, B);
     break
 end
 
@@ -166,9 +172,42 @@ ylabel("Attitude Error Z [rad]")
 xlabel("time [s]");
 
 %% Functions
-function [A, b] = smoothMat(c, a, H_tensor, Phi_tensors)
-    l = size(c, 1) * size(c, 2) * 2;
-    b = zeros(l, 1);
+function delta = computeDelta(A, b)
+    R = chol(A'*A);
+    y = A' * b \ R';
+    delta = y / R;
+end
+
+function [A, b] = smoothMat(c, a, H, Phi, Q, R)
+    N = size(c, 2);
+    measDim = size(c, 1);
+    stateDim = size(Phi, 1);
+    l = measDim * N * 2;
+    w = stateDim * N + N * measDim;
+    b = zeros(w, 1);
+    A = zeros(w, l);
+
+    for ii = 0:N-1
+        sqrt_Q = sqrtm(Q(:, :, ii + 1));
+        sqrt_R = sqrtm(R(:, :, ii + 1));
+
+        G = -eye(stateDim);
+        A(ii * stateDim + 1: ii * stateDim + stateDim, ii * stateDim + stateDim + 1: ii * stateDim + stateDim*2) = -sqrt_Q*G;
+        A(ii * stateDim + 1: ii * stateDim + stateDim, ii * stateDim + 1: ii * stateDim + stateDim) = -sqrt_Q * Phi(:, :, ii + 1);
+
+        A(ii * measDim + stateDim*N + 1: ii * measDim + stateDim *N + measDim, ii * stateDim + 1: ii * stateDim + stateDim) = sqrt_R*H(:, :, ii + 1);
+
+        b(ii*stateDim + 1: ii * stateDim + stateDim, 1) = sqrt_Q * a(:, ii + 1);
+        b(ii * measDim + stateDim * N + 1: ii * measDim + stateDim * N + measDim, 1) = sqrt_R * c(:, ii + 1);
+    end
+end
+
+function Q = calcINSNoise(tau, Srg, Sbgd, C_b_i)
+    Q = zeros(6,6);
+    Q(1:3, 1:3) = C_b_i*Srg*eye(3)*C_b_i'*tau + (1/3)*C_b_i*Sbgd*eye(3)*C_b_i'*tau^3;
+    Q(1:3, 4:6) = -(1/2)*C_b_i*Sbgd*eye(3)*tau^2;
+    Q(4:6, 1:3) = -(1/2)*C_b_i'*Sbgd*eye(3)*tau^2;
+    Q(4:6, 4:6) = Sbgd*tau*eye(3);
 end
 
 function r = measDiff(delta_v, C_b_t_hat, fsamp)
@@ -180,9 +219,9 @@ function r = measDiff(delta_v, C_b_t_hat, fsamp)
     rho_skew = deltaC - eye(3);
     r = inv_skew_symmetric(rho_skew);
 end
-
-function [C_b_t_hat, b_hat, rpy_hat, Phi_accum, a] = AHRS(C_b_t_hat_old, b, alpha, tau)
+function [C_b_t_hat, b_hat, rpy_hat, Phi_accum, a, Q_accum] = AHRS(C_b_t_hat_old, b, alpha, tau, Sbg, Srg)
     Phi_accum = eye(6);
+    Q_accum = zeros(6);
     b_hat = zeros(3, size(alpha, 2));
     rpy_hat = zeros(3, size(alpha, 2));
     C_b_t_hat = C_b_t_hat_old;
@@ -203,15 +242,20 @@ function [C_b_t_hat, b_hat, rpy_hat, Phi_accum, a] = AHRS(C_b_t_hat_old, b, alph
 
         %calculate state transition matrix
         Phi = calcStateTransition(C_b_t_hat, tau);
+        Q = calcINSNoise(tau, Srg, Sbg, C_b_t_hat);
 
+        Q_accum = Q + Q_accum;
         Phi_accum = Phi * Phi_accum;
     end
     
     %return the error between the old state and the propagated one
     delta_C = C_b_t_hat * C_b_t_hat_old';
     rho_skew = delta_C - eye(3);
-    a = inv_skew_symmetric(rho_skew);
+    rho = inv_skew_symmetric(rho_skew);
+    b_err = b - b_hat(:, end);
+    a = [rho; b_err];
 end
+
 function  [phi, theta] = level(delta_v, fsamp)
     theta_arr = zeros(1, 1*fsamp);
     phi_arr = zeros(1, 1*fsamp);
