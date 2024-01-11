@@ -1,0 +1,115 @@
+                              ***ITRF2014***
+                MLFP_SCGN_CS1998 (MLFP),  CALIFORNIA
+
+ Retrieved from NGS DataBase on 10/03/23 at 13:33:38.
+ _____________________________________________________________________________ 
+|                                                                             |
+|         Antenna Reference Point(ARP): MLFP_SCGN_CS1998 CORS ARP             |
+|         -------------------------------------------------------             |
+|                             PID = DH7093                                    |
+|                                                                             |
+|                                                                             |
+| ITRF2014 POSITION (EPOCH 2010.0)                                            |
+| Computed in Jun 2019 using data through gpswk 1933.                         |
+|     X =  -2431725.154 m     latitude    =  33 55 06.25353 N                 |
+|     Y =  -4707760.032 m     longitude   = 117 19 04.65199 W                 |
+|     Z =   3539203.438 m     ellipsoid height =  472.966   m                 |
+|                                                                             |
+| ITRF2014 VELOCITY                                                           |
+| Computed in Jun 2019 using data through gpswk 1933.                         |
+|     VX =  -0.0273 m/yr      northward =   0.0133 m/yr                       |
+|     VY =   0.0210 m/yr      eastward  =  -0.0339 m/yr                       |
+|     VZ =   0.0119 m/yr      upward    =   0.0016 m/yr                       |
+|                                                                             |
+|                                                                             |
+| NAD_83 (2011) POSITION (EPOCH 2010.0)                                       |
+| Transformed from ITRF2014 (epoch 2010.0) position in Jun 2019.              |
+|     X =  -2431724.392 m     latitude    =  33 55 06.24063 N                 |
+|     Y =  -4707761.355 m     longitude   = 117 19 04.60200 W                 |
+|     Z =   3539203.514 m     ellipsoid height =  473.693   m                 |
+|                                                                             |
+| NAD_83 (2011) VELOCITY                                                      |
+| Transformed from ITRF2014 velocity in Jun 2019.                             |
+|     VX =  -0.0122 m/yr      northward =   0.0246 m/yr                       |
+|     VY =   0.0213 m/yr      eastward  =  -0.0206 m/yr                       |
+|     VZ =   0.0207 m/yr      upward    =   0.0005 m/yr                       |
+|_____________________________________________________________________________|
+|                                                                             |
+| L1 Phase Center of the current GPS antenna: MLFP_SCGN_CS1998 CORS L1PC      |
+| -------------------------------------------------------------------------   |
+| The Dorne Margolin with chokerings, Model 59 antenna                        |
+| (Antenna Code = TRM59800.99     SCIT) was installed on 23Sep2020.           |
+|        The L2 phase center is 0.031 m above the L1 phase center.            |
+|                             PID = DR9276                                    |
+|                                                                             |
+|                                                                             |
+| ITRF2014 POSITION (EPOCH 2010.0)                                            |
+| Computed in Jun 2019 using data through gpswk 1933.                         |
+|     X =  -2431725.185 m     latitude    =  33 55 06.25347 N                 |
+|     Y =  -4707760.097 m     longitude   = 117 19 04.65192 W                 |
+|     Z =   3539203.484 m     ellipsoid height =  473.051   m                 |
+|                                                                             |
+| The ITRF2014 VELOCITY of the L1 PC is the same as that for the ARP.         |
+|                                                                             |
+|                                                                             |
+| NAD_83 (2011) POSITION (EPOCH 2010.0)                                       |
+| Transformed from ITRF2014 (epoch 2010.0) position in Jun 2019.              |
+|     X =  -2431724.423 m     latitude    =  33 55 06.24057 N                 |
+|     Y =  -4707761.419 m     longitude   = 117 19 04.60194 W                 |
+|     Z =   3539203.560 m     ellipsoid height =  473.778   m                 |
+|                                                                             |
+| The NAD_83 (2011) VELOCITY of the L1 PC is the same as that for the ARP.    |
+|_____________________________________________________________________________|
+|                                                                             |
+|         Monument: MLFP_SCGN_CS1998 CORS GRP                                 |
+|         -----------------------------------                                 |
+|                             PID = AJ1887                                    |
+|         Inscribed: UNKNOWN                                                  |
+|                                                                             |
+|                                                                             |
+| ITRF2014 POSITION (EPOCH 2010.0)                                            |
+| Computed in Jun 2019 using data through gpswk 1933.                         |
+|     X =  -2431725.151 m     latitude    =  33 55 06.25353 N                 |
+|     Y =  -4707760.026 m     longitude   = 117 19 04.65198 W                 |
+|     Z =   3539203.433 m     ellipsoid height =  472.957   m                 |
+|                                                                             |
+| The ITRF2014 VELOCITY of the monument is the same as that for the ARP.      |
+|                                                                             |
+|                                                                             |
+| NAD_83 (2011) POSITION (EPOCH 2010.0)                                       |
+| Transformed from ITRF2014 (epoch 2010.0) position in Jun 2019.              |
+|     X =  -2431724.389 m     latitude    =  33 55 06.24063 N                 |
+|     Y =  -4707761.348 m     longitude   = 117 19 04.60200 W                 |
+|     Z =   3539203.509 m     ellipsoid height =  473.684   m                 |
+|                                                                             |
+| The NAD_83 (2011) VELOCITY of the monument is the same as that for the ARP. |
+|_____________________________________________________________________________|
+
+
+ * Latitude, longitude and ellipsoid height are computed from their
+   corresponding cartesian coordinates using dimensions for the
+   GRS 80 ellipsoid: semi-major axis = 6,378,137.0 meters
+                          flattening = 1/298.257222101...
+
+
+ * WARNING: Mixing of antenna types can lead to errors of up to 10 cm.
+   in height unless antenna-phase-center variation and antenna-phase-center
+   offset are properly modeled.  See next comment.
+
+ * The coordinates shown on this page were computed using absolute antenna
+   calibrations.  CORS coordinates began using absolute antenna calibrations
+   beginning with IGS08 and NAD 83 (2011, MA11, PA11).  For additional
+   information on the derivation of these positions and velocities and
+   antenna calibrations consult:
+   http://geodesy.noaa.gov/CORS/coords.shtml
+   http://geodesy.noaa.gov/ANTCAL
+
+
+ * For more site specific information on the equipment history and
+   monumentation type consult:
+   ftp://geodesy.noaa.gov/cors/station_log/mlfp.log.txt
+   http://geodesy.noaa.gov/cgi-cors/corsage_2.prl?site=mlfp
+
+
+ * The position & velocity were revised in Jan 2012.
+ * The position & velocity were revised in Jun 2019.

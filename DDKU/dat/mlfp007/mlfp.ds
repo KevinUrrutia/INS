@@ -1,0 +1,113 @@
+PROGRAM = datasheet95, VERSION = 8.12.5.16
+Starting Datasheet Retrieval...
+1        National Geodetic Survey,   Retrieval Date = JANUARY  9, 2024
+ DH7093 ***********************************************************************
+ DH7093  CORS        -  This is a GPS Continuously Operating Reference Station.
+ DH7093  DESIGNATION -  MLFP_SCGN_CS1998 CORS ARP
+ DH7093  CORS_ID     -  MLFP
+ DH7093  PID         -  DH7093
+ DH7093  STATE/COUNTY-  CA/RIVERSIDE
+ DH7093  COUNTRY     -  US
+ DH7093  USGS QUAD   -  RIVERSIDE EAST (2018)
+ DH7093
+ DH7093                         *CURRENT SURVEY CONTROL
+ DH7093  ______________________________________________________________________
+ DH7093* NAD 83(2011) POSITION- 33 55 06.24063(N) 117 19 04.60200(W)   ADJUSTED
+ DH7093* NAD 83(2011) ELLIP HT-   473.693 (meters)        (06/??/19)   ADJUSTED
+ DH7093* NAD 83(2011) EPOCH   -  2010.00
+ DH7093* NAVD 88 ORTHO HEIGHT -   506.554 (meters)     1661.92  (feet) ADJUSTED
+ DH7093  ______________________________________________________________________
+ DH7093  GEOID HEIGHT    -        -32.854 (meters)                     GEOID18
+ DH7093  NAD 83(2011) X  - -2,431,724.392 (meters)                     COMP
+ DH7093  NAD 83(2011) Y  - -4,707,761.355 (meters)                     COMP
+ DH7093  NAD 83(2011) Z  -  3,539,203.514 (meters)                     COMP
+ DH7093  VERT ORDER      -  SECOND    CLASS II
+ DH7093
+ DH7093  Network accuracy estimates per FGDC Geospatial Positioning Accuracy
+ DH7093  Standards:
+ DH7093         FGDC (95% conf, cm)     Standard deviation (cm)     CorrNE
+ DH7093            Horiz  Ellip           SD_N   SD_E   SD_h      (unitless)
+ DH7093  -------------------------------------------------------------------
+ DH7093  NETWORK    0.16   0.51           0.07   0.06   0.26      0.05700900
+ DH7093  -------------------------------------------------------------------
+ DH7093
+ DH7093.The coordinates were established by GPS observations
+ DH7093.and adjusted by the National Geodetic Survey in June 2019.
+ DH7093
+ DH7093.NAD 83(2011) refers to NAD 83 coordinates where the reference frame has 
+ DH7093.been affixed to the stable North American Tectonic Plate. 
+ DH7093
+ DH7093.The coordinates are valid at the epoch date displayed above
+ DH7093.which is a decimal equivalence of Year/Month/Day.
+ DH7093
+ DH7093.Due to the release of the International GNSS Service (IGS) 2014
+ DH7093.realization of the International Terrestrial Reference Frame of 2014
+ DH7093.(ITRF2014), NGS reprocessed all NOAA CORS Network and some IGS stations
+ DH7093.using data collected between 1/1/1996 and 1/30/2017. The resulting ITRF2014
+ DH7093.epoch 2010.00 coordinates, referred to as Multi-Year CORS Solution 2
+ DH7093.(MYCS2), were transformed to NAD 83 (2011/PA11/MA11) maintaining the
+ DH7093.currently published epoch of 2010.00.
+ DH7093
+ DH7093.Additional information on MYCS2 is available at
+ DH7093.https://geodesy.noaa.gov/CORS/news/mycs2/mycs2.shtml
+ DH7093
+ DH7093.The orthometric height was determined by differential leveling and
+ DH7093.adjusted by the NATIONAL GEODETIC SURVEY
+ DH7093.in January 2006.
+ DH7093
+ DH7093.Significant digits in the geoid height do not necessarily reflect accuracy.
+ DH7093.GEOID18 height accuracy estimate available here.
+ DH7093
+ DH7093.The PID for the CORS L1 Phase Center is DR9276.
+ DH7093
+ DH7093.Click photographs - Photos may exist for this station.
+ DH7093
+ DH7093.The XYZ, and position/ellipsoidal ht. are equivalent.
+ DH7093
+ DH7093.The ellipsoidal height was determined by GPS observations
+ DH7093.and is referenced to NAD 83.
+ DH7093
+ DH7093. The following values were computed from the NAD 83(2011) position.
+ DH7093
+ DH7093;                    North         East     Units Scale Factor Converg.
+ DH7093;SPC CA 6     -   694,783.292 1,901,245.019   MT  1.00000605   -0 35 12.7
+ DH7093;SPC CA 6     - 2,279,468.18  6,237,668.03   sFT  1.00000605   -0 35 12.7
+ DH7093;UTM  11      - 3,753,153.914   470,610.366   MT  0.99961065   -0 10 38.7
+ DH7093
+ DH7093!             -  Elev Factor  x  Scale Factor =   Combined Factor
+ DH7093!SPC CA 6     -   0.99992564  x   1.00000605  =   0.99993169
+ DH7093!UTM  11      -   0.99992564  x   0.99961065  =   0.99953632
+ DH7093
+ DH7093_U.S. NATIONAL GRID SPATIAL ADDRESS: 11SMT7061053153(NAD 83)
+ DH7093
+ DH7093                          SUPERSEDED SURVEY CONTROL
+ DH7093
+ DH7093  NAD 83(2011)-  33 55 06.24080(N)    117 19 04.60176(W) AD(2010.00) c
+ DH7093  ELLIP H (01/??/12)  473.700  (m)                       GP(2010.00) c c
+ DH7093  NAD 83(CORS)-  33 55 06.23438(N)    117 19 04.59558(W) AD(2002.00) c
+ DH7093  ELLIP H (01/??/12)  473.701  (m)                       GP(2002.00) c c
+ DH7093
+ DH7093.Superseded values are not recommended for survey control.
+ DH7093
+ DH7093.NGS no longer adjusts projects to the NAD 27 or NGVD 29 datums.
+ DH7093.See file dsdata.pdf to determine how the superseded data were derived.
+ DH7093
+ DH7093_MARKER: STATION IS THE ANTENNA REFERENCE POINT OF THE GPS ANTENNA
+ DH7093_MARK LOGO: NONE
+ DH7093_MAGNETIC: N = NO MAGNETIC MATERIAL
+ DH7093
+ DH7093                          STATION DESCRIPTION
+ DH7093
+ DH7093'DESCRIBED BY NATIONAL GEODETIC SURVEY 2019
+ DH7093'STATION IS A GPS CORS.  LATEST INFORMATION INCLUDING POSITIONS AND
+ DH7093'VELOCITIES ARE AVAILABLE IN THE COORDINATE AND LOG FILES ACCESSIBLE
+ DH7093'BY ANONYMOUS FTP OR THE WORLDWIDE WEB.
+ DH7093'   https://geodesy.noaa.gov/corsdata/coord/coord_14 
+ DH7093'   https://geodesy.noaa.gov/corsdata/station_log 
+ DH7093'   https://geodesy.noaa.gov/CORS
+
+
+
+
+ *** retrieval complete.
+ Elapsed Time = 00:00:03
