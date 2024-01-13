@@ -38,6 +38,7 @@ def read_nav(navigation_file, meas_dir):
     nav = gr.load(navigation_file)
 
     os.chdir(meas_dir)
+    print(list(nav.keys()))
 
     with open(file_name, 'w') as f:
         f.write("time,sat,SVClockBias,SVClockDrift,SVClockDriftRate,IODE,Crs,DeltaN,M0,Cuc,Eccentricity,Cus,sqrtA,")
@@ -64,6 +65,7 @@ def read_nav(navigation_file, meas_dir):
                 sqrtA = str(nav.sel(sv=sat)['sqrtA'].values[i])
                 Toe = str(nav.sel(sv=sat)['Toe'].values[i])
                 Cic = str(nav.sel(sv=sat)['Cic'].values[i])
+                Omega0 = str(nav.sel(sv=sat)['Omega0'].values[i])
                 Io = str(nav.sel(sv=sat)['Io'].values[i])
                 Crc = str(nav.sel(sv=sat)['Crc'].values[i])
                 omega = str(nav.sel(sv=sat)['omega'].values[i])
@@ -81,7 +83,7 @@ def read_nav(navigation_file, meas_dir):
 
                 f.write(time_str + "," + sat_str + "," + SVClockBias + "," + SVClockDrift + "," + SVClockDriftRate + ",")
                 f.write(IODE + "," + Crs + "," + DeltaN + "," + M0 + "," + Cuc + "," + Eccentricity + "," + Cus + ",")
-                f.write(sqrtA + "," + Toe + "," + Cic + "," + Io + "," + Crc + "," + omega + "," + OmegaDot + ",")
+                f.write(sqrtA + "," + Toe + "," + Cic + "," + Omega0 + "," + Io + "," + Crc + "," + omega + "," + OmegaDot + ",")
                 f.write(IDOT + "," + CodesL2 + "," + GPSWeek + "," + L2Pflag + "," + SVacc + "," + health + "," + TGD + ",")
                 f.write(IODC + "," + TransTime + "," + FitIntvl + '\n')
 
@@ -155,6 +157,7 @@ def read_coord(coord_file, meas_dir):
     os.chdir("../")
 
 #####################################################################################################################################################
+# Rinex Converter: Converts Rinex V 2.1 Files gathered from CORS servers to csv
 # Inputs: Rinex V 2.1 Observation, Navigation, Orbit and Coordinate Files
 #         in the form of SSSDDDH.YYo, SSSDDDH.YYn, .sp3, SSSS.ds respectively
 #         where:
@@ -173,7 +176,8 @@ def read_coord(coord_file, meas_dir):
 #
 # Author: Kevin Urrutia
 #
-# Date: Jan 11, 2024
+# Revision History:
+# v 1.0 Pre-Release Jan 11, 2024
  #####################################################################################################################################################
 
 
@@ -221,10 +225,10 @@ def main(argv):
    if not os.path.exists(meas_dir):
     os.mkdir(meas_dir)
 
-   read_orbit(orbit_file, meas_dir)
+   # read_orbit(orbit_file, meas_dir)
    read_nav(navigation_file, meas_dir)
-   read_obs(observation_file, meas_dir)
-   read_coord(coord_file, meas_dir)
+   # read_obs(observation_file, meas_dir)
+   # read_coord(coord_file, meas_dir)
 
 
 if __name__ == "__main__":
