@@ -38,7 +38,6 @@ def read_nav(navigation_file, meas_dir):
     nav = gr.load(navigation_file)
 
     os.chdir(meas_dir)
-    print(list(nav.keys()))
 
     with open(file_name, 'w') as f:
         f.write("time,sat,SVClockBias,SVClockDrift,SVClockDriftRate,IODE,Crs,DeltaN,M0,Cuc,Eccentricity,Cus,sqrtA,")
@@ -222,13 +221,14 @@ def main(argv):
 
    nav = gr.load(navigation_file)
    meas_dir = base_loc + "_" +  np.datetime_as_string(nav.time[0])
+   meas_dir = meas_dir.replace(":", "_")
    if not os.path.exists(meas_dir):
     os.mkdir(meas_dir)
 
-   # read_orbit(orbit_file, meas_dir)
+   read_orbit(orbit_file, meas_dir)
    read_nav(navigation_file, meas_dir)
-   # read_obs(observation_file, meas_dir)
-   # read_coord(coord_file, meas_dir)
+   read_obs(observation_file, meas_dir)
+   read_coord(coord_file, meas_dir)
 
 
 if __name__ == "__main__":
