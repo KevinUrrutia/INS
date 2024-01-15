@@ -10,7 +10,7 @@ def read_orbit(orbit_file, meas_dir):
     os.chdir(meas_dir)
 
     with open(file_name, 'w') as f:
-        f.write("time, sat, X, Y, Z, Vx, Vy, Vz, clock, dclock\n")
+        f.write("time, PRN, X, Y, Z, Vx, Vy, Vz, clock, dclock\n")
 
         for i in range(len(orbit.time)):
             for j in range(len(orbit.sv)):
@@ -28,6 +28,18 @@ def read_orbit(orbit_file, meas_dir):
                 clock = str(orbit.sel(sv=sat)['clock'].values[i])
                 dclock = str(orbit.sel(sv=sat)['dclock'].values[i])
 
+
+                if 'G' in sat_str:
+                    idx = sat_str.index('G');
+                    sat_str = "GPS_L1x_" + sat_str[idx + 1:idx + 3];
+                elif 'E' in sat_str:
+                    idx = sat_str.index('E')
+                    sat_str = "GAL_E1a_" + sat_str[idx + 1:idx + 3];
+                elif 'R' in sat_str:
+                    idx = sat_str.index('R')
+                    sat_str = "GLO_R1x_" + sat_str[idx + 1:idx + 3];
+
+
                 f.write(time_str + ',' + sat_str + ',' + X_str + ',' + Y_str + ',' + Z_str + ",")
                 f.write(Vx_str + "," + Vy_str + "," + Vz_str + "," + clock + "," + dclock + "\n")
 
@@ -40,7 +52,7 @@ def read_nav(navigation_file, meas_dir):
     os.chdir(meas_dir)
 
     with open(file_name, 'w') as f:
-        f.write("time,sat,SVClockBias,SVClockDrift,SVClockDriftRate,IODE,Crs,DeltaN,M0,Cuc,Eccentricity,Cus,sqrtA,")
+        f.write("time,PRN,SVClockBias,SVClockDrift,SVClockDriftRate,IODE,Crs,DeltaN,M0,Cuc,Eccentricity,Cus,sqrtA,")
         f.write("Toe,Cic,Omega0,Cis,Io,Crc,omega,OmegaDot,IDOT,CodesL2,GPSWeek,L2Pflag")
         f.write("SVacc,health,TGD,IODC,TransTime,FitIntvl\n")
 
@@ -80,6 +92,16 @@ def read_nav(navigation_file, meas_dir):
                 TransTime = str(nav.sel(sv=sat)['TransTime'].values[i])
                 FitIntvl = str(nav.sel(sv=sat)['FitIntvl'].values[i])
 
+                if 'G' in sat_str:
+                    idx = sat_str.index('G');
+                    sat_str = "GPS_L1x_" + sat_str[idx + 1:idx + 3];
+                elif 'E' in sat_str:
+                    idx = sat_str.index('E')
+                    sat_str = "GAL_E1a_" + sat_str[idx + 1:idx + 3];
+                elif 'R' in sat_str:
+                    idx = sat_str.index('R')
+                    sat_str = "GLO_R1x_" + sat_str[idx + 1:idx + 3];
+
                 f.write(time_str + "," + sat_str + "," + SVClockBias + "," + SVClockDrift + "," + SVClockDriftRate + ",")
                 f.write(IODE + "," + Crs + "," + DeltaN + "," + M0 + "," + Cuc + "," + Eccentricity + "," + Cus + ",")
                 f.write(sqrtA + "," + Toe + "," + Cic + "," + Omega0 + "," + Io + "," + Crc + "," + omega + "," + OmegaDot + ",")
@@ -107,7 +129,7 @@ def read_obs(obs_file, meas_dir):
     os.chdir(meas_dir)
 
     with open(file_name, 'w') as f:
-        f.write("time,rho,phi,SNR")
+        f.write("time,PRN,rho,phi,SNR\n")
 
         for i in range(len(obs.time)):
             for j in range(len(obs.sv)):
@@ -120,7 +142,17 @@ def read_obs(obs_file, meas_dir):
                 phi = str(obs.sel(sv=sat)['L1'].values[i])
                 SNR = str(obs.sel(sv=sat)['S1'].values[i])
 
-                f.write(time_str + "," + rho + "," + phi  + "," + SNR + "\n")
+                if 'G' in sat_str:
+                    idx = sat_str.index('G');
+                    sat_str = "GPS_L1x_" + sat_str[idx + 1:idx + 3];
+                elif 'E' in sat_str:
+                    idx = sat_str.index('E')
+                    sat_str = "GAL_E1a_" + sat_str[idx + 1:idx + 3];
+                elif 'R' in sat_str:
+                    idx = sat_str.index('R')
+                    sat_str = "GLO_R1x_" + sat_str[idx + 1:idx + 3];
+
+                f.write(time_str + "," + sat_str +  "," + rho + "," + phi  + "," + SNR + "\n")
 
     os.chdir("../")
 
@@ -226,9 +258,13 @@ def main(argv):
     os.mkdir(meas_dir)
 
    read_orbit(orbit_file, meas_dir)
+   print("Finished Reading Orbit File")
    read_nav(navigation_file, meas_dir)
+   print("Finished Reading Navigation File")
    read_obs(observation_file, meas_dir)
+   print("Finished Reading Observation File")
    read_coord(coord_file, meas_dir)
+   print("Finished Reading Coordinate File")
 
 
 if __name__ == "__main__":

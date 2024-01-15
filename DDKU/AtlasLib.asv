@@ -170,12 +170,10 @@ classdef AtlasLib
         end
 
         function unixTime = UTC2unix(UTC)
-            unixTime = convertTo(UTC, 'epochtime', 'Epoch', '1970-01-01')';
+            unixTime = convertTo(UTC, 'epochtime', '')
         end
 
         function gpsTime = UTC2gps(UTC)
-            unixTime = AtlasLib.UTC2unix(UTC);
-            gpsTime = AtlasLib.unix2gps(unixTime);
         end
 
     end
