@@ -53,7 +53,7 @@ def read_nav(navigation_file, meas_dir):
 
     with open(file_name, 'w') as f:
         f.write("time,PRN,SVClockBias,SVClockDrift,SVClockDriftRate,IODE,Crs,DeltaN,M0,Cuc,Eccentricity,Cus,sqrtA,")
-        f.write("Toe,Cic,Omega0,Cis,Io,Crc,omega,OmegaDot,IDOT,CodesL2,GPSWeek,L2Pflag")
+        f.write("Toe,Cic,Omega0,Cis,Io,Crc,omega,OmegaDot,IDOT,CodesL2,GPSWeek,L2Pflag,")
         f.write("SVacc,health,TGD,IODC,TransTime,FitIntvl\n")
 
         for i in range(len(nav.time)):
@@ -77,6 +77,7 @@ def read_nav(navigation_file, meas_dir):
                 Toe = str(nav.sel(sv=sat)['Toe'].values[i])
                 Cic = str(nav.sel(sv=sat)['Cic'].values[i])
                 Omega0 = str(nav.sel(sv=sat)['Omega0'].values[i])
+                Cis = str(nav.sel(sv=sat)['Cis'].values[i])
                 Io = str(nav.sel(sv=sat)['Io'].values[i])
                 Crc = str(nav.sel(sv=sat)['Crc'].values[i])
                 omega = str(nav.sel(sv=sat)['omega'].values[i])
@@ -104,7 +105,7 @@ def read_nav(navigation_file, meas_dir):
 
                 f.write(time_str + "," + sat_str + "," + SVClockBias + "," + SVClockDrift + "," + SVClockDriftRate + ",")
                 f.write(IODE + "," + Crs + "," + DeltaN + "," + M0 + "," + Cuc + "," + Eccentricity + "," + Cus + ",")
-                f.write(sqrtA + "," + Toe + "," + Cic + "," + Omega0 + "," + Io + "," + Crc + "," + omega + "," + OmegaDot + ",")
+                f.write(sqrtA + "," + Toe + "," + Cic + "," + Omega0 + "," + Cis + "," + Io + "," + Crc + "," + omega + "," + OmegaDot + ",")
                 f.write(IDOT + "," + CodesL2 + "," + GPSWeek + "," + L2Pflag + "," + SVacc + "," + health + "," + TGD + ",")
                 f.write(IODC + "," + TransTime + "," + FitIntvl + '\n')
 

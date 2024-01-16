@@ -24,7 +24,7 @@ classdef AtlasLib
     end
 
     methods (Static)
-        function [r, r_dot] = satellite_cart_coord(obj, ephem)
+        function [r, r_dot] = satellite_ephem(obj, ephem)
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % Inputs: 
             % ephem - satellite ephemeris
@@ -49,6 +49,7 @@ classdef AtlasLib
             Toe = ephem.Toe; 
             Cic = ephem.Cic;
             Omega0 = ephem.Omega0;
+            Cis = ephem.Cis;
             Io = ephem.Io;
             Crc = ephem.Crc;
             omega = ephem.omega;
@@ -60,12 +61,12 @@ classdef AtlasLib
             r_dot = zeros(3,1);
 
             %satellite positions in ECEF
-            delta_t = obj.weekroll(TransTime - Toe); 
+            delta_t = obj.weekroll(obj, TransTime - Toe); 
             delta_t_sv = SVClockBias + SVClockDrift*delta_t + SVClockDriftRate*delta_t^2;
             t_sv = TransTime - delta_t_sv; %true satellite time
 
             A = sqrtA^2;
-            t_k = obj.weekroll(t_sv - Toe);
+            t_k = obj.weekroll(obj, t_sv - Toe);
             n0 = sqrt(obj.GM / A^3); %Mean Motion
             n = n0 + DeltaN; % Corrected Mean Motion
             M_k = M0 + n*t_k; %Mean Anomoly
@@ -82,7 +83,7 @@ classdef AtlasLib
 
             delta_u_k = Cuc*cos(2*Phi_k) + Cus*sin(2*Phi_k); %Argument of latitude correction
             delta_r_k = Crc*cos(2*Phi_k) + Crs*sin(2*Phi_k); %Radius Correction
-            delta_i_k = Cic*cost(2*Phi_k) + Cis*sin(2*Phi_k); %Inclinnation Correction
+            delta_i_k = Cic*cos(2*Phi_k) + Cis*sin(2*Phi_k); %Inclinnation Correction
             u_k = Phi_k + delta_u_k; %Corrected Argument of Latitude
             r_k = A*(1 - Eccentricity*cos(E_k)) + delta_r_k; %Corrected Radius
             i_k = Io + delta_i_k + IDOT*t_k; %corrected incclination
@@ -97,14 +98,14 @@ classdef AtlasLib
             %satellite velocities in ECEF
             E_k_dot = n / (1 - Eccentricity*cos(E_k)); %Eccentricity anomoly rate
             nu_k_dot = E_k_dot*sqrt(1 - Eccentricity^2) / (1 - Eccentricity*cos(E_k)); %True Anomoly Rate
-            d_ik_dt = IDOT + 2*v_k*(Cis*cos(2*Phi_k) - Cic*sin(2*Phi_k)); %Corrected Inclination Angle rate
+            d_ik_dt = IDOT + 2*nu_k*(Cis*cos(2*Phi_k) - Cic*sin(2*Phi_k)); %Corrected Inclination Angle rate
             u_k_dot = nu_k_dot + 2*nu_k_dot*(Cus*cos(2*Phi_k) - Cuc*sin(2*Phi_k)); %corrected Argument of Latitude Rate
             r_k_dot = Eccentricity*A*E_k_dot*sin(E_k) + 2*nu_k*(Crs*cos(2*Phi_k) - Crc*sin(2*Phi_k)); %Corrected Radius rate
             Omega_k_dot = OmegaDot - obj.omega_e;
             X_k_prime_dot = r_k_dot*cos(u_k) - r_k*u_k_dot*sin(u_k);
             Y_k_prime_dot = r_k_dot*sin(u_k) + r_k*u_k_dot*cos(u_k);
             r_dot(1) = -X_k_prime*Omega_k_dot*sin(Omega_k) + X_k_prime_dot*cos(Omega_k) - Y_k_prime_dot*sin(Omega_k)*cos(i_k) - Y_k_prime*(Omega_k_dot*cos(Omega_k)*cos(i_k) - d_ik_dt*sin(Omega_k)*sin(i_k));
-            r_dot(2) = X_k_prime*Omega_k_dot*cos(Omega_k) + X_K_prime_dot*sin(Omega_k) + Y_k_prime_dot*cos(Omega_k)*cos(i_k) - Y_k_prime*(Omega_k_dot*sin(Omega_k)*cos(i_k) + d_ik_dt*cos(Omega_k)*sin(i_k));
+            r_dot(2) = X_k_prime*Omega_k_dot*cos(Omega_k) + X_k_prime_dot*sin(Omega_k) + Y_k_prime_dot*cos(Omega_k)*cos(i_k) - Y_k_prime*(Omega_k_dot*sin(Omega_k)*cos(i_k) + d_ik_dt*cos(Omega_k)*sin(i_k));
             r_dot(3) = Y_k_prime_dot*sin(i_k) + Y_k_prime*d_ik_dt*cos(i_k);
 
         end
