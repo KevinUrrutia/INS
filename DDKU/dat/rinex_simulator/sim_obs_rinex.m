@@ -67,13 +67,13 @@ for ii = 1:size(fn, 1)
 end
 
 %% Grab appropriate SNR and place them at the correct time instant, interpolate if needed
-for ii = 1:size(fn, 1)
-    r_S(1).(fn{ii}).SNR = [];
-    
-    %find the indices that correspond to current PRN
-    idx = any(strcmp(obs_t.PRN, fn{ii}));
-       
-    for jj = 1:length(r_S(1).(fn{ii}).GPStime)
-       time_idx = find(cell2mat(obs_t.time(idx)))
-    end
-end
+% for ii = 1:size(fn, 1)
+%     r_S(1).(fn{ii}).SNR = [];
+% 
+%     %find the indices that correspond to current PRN
+%     idx = any(strcmp(obs_t.PRN, fn{ii}));
+% 
+%     for jj = 1:length(r_S(1).(fn{ii}).GPStime)
+%        time_idx = find(cell2mat(obs_t.time(idx)))
+%     end
+% end
